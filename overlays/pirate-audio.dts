@@ -1,0 +1,48 @@
+/dts-v1/;
+/plugin/;
+
+/* Pimoroni Pirate Audio Line Out on Orange Pi Zero 2W (Allwinner H618)
+ * - SPI1 for ST7789 display: SCLK=PH6, MOSI=PH7 only (PH8 left as GPIO for DC).
+ *   Display CS = header CE1 = PH9, driven as a GPIO chip-select (mainline-safe).
+ * - DAC enable = PI6 held high (equiv of Pi's gpio=25=op,dh).
+ * DC=PH8(gpio232), Backlight=PI12(gpio268), buttons handled in software.
+ */
+
+/ {
+	compatible = "allwinner,sun50i-h616";
+
+	fragment@0 {
+		target-path = "/soc/pinctrl@300b000";
+		__overlay__ {
+			pirate_audio_spi_pins: pirate-audio-spi-pins {
+				pins = "PH6", "PH7";
+				function = "spi1";
+			};
+
+			pirate_audio_dac_enable {
+				gpio-hog;
+				gpios = <8 6 0>;        /* PI6, active high */
+				output-high;
+				line-name = "pirate-audio-dac-enable";
+			};
+		};
+	};
+
+	fragment@1 {
+		target-path = "/soc/spi@5011000";
+		__overlay__ {
+			status = "okay";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pirate_audio_spi_pins>;
+			cs-gpios = <0>, <&pio 7 9 1>;   /* CS1 = PH9, active low */
+
+			pirate_audio_display: spidev@1 {
+				compatible = "rohm,dh2228fv";
+				reg = <1>;
+				spi-max-frequency = <40000000>;
+			};
+		};
+	};
+};

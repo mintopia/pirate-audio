@@ -1,0 +1,68 @@
+/dts-v1/;
+/plugin/;
+
+/* Experimental: Pirate Audio PCM5102A I2S DAC on Orange Pi Zero 2W (H618).
+ * Allwinner AHUB, DAI i2s0 / tdm0: PI1=BCLK, PI2=LRCLK, PI3=DATA(dout0).
+ * SoC is bit+frame clock master; PCM5102 is a dumb DAC (empty codec node).
+ */
+
+/ {
+	compatible = "allwinner,sun50i-h616";
+
+	fragment@0 {
+		target-path = "/soc/pinctrl@300b000";
+		__overlay__ {
+			i2s0_pirate_pins: i2s0-pirate-pins {
+				pins = "PI1", "PI2";
+				function = "i2s0";
+			};
+			i2s0_pirate_dout: i2s0-pirate-dout {
+				pins = "PI3";
+				function = "i2s0_dout0";
+			};
+		};
+	};
+
+	fragment@1 {
+		target-path = "/soc";
+		__overlay__ {
+			ahub0_plat: ahub0_plat {
+				#sound-dai-cells = <0>;
+				compatible = "allwinner,sunxi-snd-plat-ahub";
+				apb_num = <0>;
+				tdm_num = <0>;
+				tx_pin = <0>;
+				rx_pin = <0>;
+				dmas = <&dma 3>, <&dma 3>;
+				dma-names = "tx", "rx";
+				playback_cma = <128>;
+				capture_cma = <128>;
+				tx_fifo_size = <128>;
+				rx_fifo_size = <128>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&i2s0_pirate_pins &i2s0_pirate_dout>;
+				status = "okay";
+			};
+
+			ahub0_mach {
+				compatible = "allwinner,sunxi-snd-mach";
+				soundcard-mach,name = "pirate-i2s";
+				soundcard-mach,format = "i2s";
+				soundcard-mach,slot-num = <2>;
+				soundcard-mach,slot-width = <32>;
+				soundcard-mach,frame-master = <&pirate_cpu>;
+				soundcard-mach,bitclock-master = <&pirate_cpu>;
+				status = "okay";
+
+				pirate_cpu: soundcard-mach,cpu {
+					sound-dai = <&ahub0_plat>;
+					soundcard-mach,mclk-fs = <0>;
+					soundcard-mach,pll-fs = <4>;
+				};
+
+				soundcard-mach,codec {
+				};
+			};
+		};
+	};
+};
